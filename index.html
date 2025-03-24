@@ -1,0 +1,1017 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt管理器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css">
+    <style>
+        .prompt-item {
+            transition: all 0.2s ease;
+        }
+        .prompt-item:hover {
+            transform: translateY(-2px);
+        }
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+        .dark .dark\:custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .dark .dark\:custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e1e24;
+        }
+        .dark .dark\:custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b4b60;
+            border-radius: 4px;
+        }
+        .dark .dark\:custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #5D5CDE;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d1d1e0;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #5D5CDE;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        .copy-success::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: rgba(93, 92, 222, 0.5);
+            animation: pulse-ring 1s ease-out;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center">
+                <i class="fas fa-clipboard-list text-primary mr-3"></i>
+                Prompt管理器
+            </h1>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">保存、搜索和一键插入您的Prompt集合</p>
+        </header>
+
+        <!-- 主界面 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左侧: 添加Prompt表单 -->
+            <div class="lg:col-span-1 order-2 lg:order-1">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-plus-circle text-primary mr-2"></i>添加新Prompt
+                    </h2>
+                    <form id="promptForm" class="space-y-4">
+                        <div>
+                            <label for="promptTitle" class="block text-gray-700 dark:text-gray-200 mb-1">标题</label>
+                            <input type="text" id="promptTitle" required="" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-base">
+                        </div>
+                        <div>
+                            <label for="promptTags" class="block text-gray-700 dark:text-gray-200 mb-1">标签 (用逗号分隔)</label>
+                            <input type="text" id="promptTags" placeholder="例如: GPT-4, 写作, 翻译" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-base">
+                        </div>
+                        <div>
+                            <label for="promptContent" class="block text-gray-700 dark:text-gray-200 mb-1">内容</label>
+                            <textarea id="promptContent" rows="6" required="" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none text-base"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-3 px-4 bg-primary hover:bg-opacity-90 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            保存Prompt
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mt-6">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-database text-primary mr-2"></i>数据管理
+                    </h2>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="flex-1 relative group">
+                            <button id="exportBtn" class="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600 flex items-center justify-center">
+                                <i class="fas fa-file-export mr-2"></i>导出数据
+                                <i class="fas fa-chevron-down ml-2"></i>
+                            </button>
+                            <div class="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-700 rounded-md shadow-lg overflow-hidden z-10 hidden group-hover:block">
+                                <button id="exportJsonBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-white transition-colors">
+                                    <i class="fas fa-file-code mr-2"></i>JSON格式
+                                </button>
+                                <button id="exportCsvBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-white transition-colors">
+                                    <i class="fas fa-file-csv mr-2"></i>CSV格式
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex-1 relative group">
+                            <button id="importBtn" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 flex items-center justify-center">
+                                <i class="fas fa-file-import mr-2"></i>导入数据
+                                <i class="fas fa-chevron-down ml-2"></i>
+                            </button>
+                            <div class="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-700 rounded-md shadow-lg overflow-hidden z-10 hidden group-hover:block">
+                                <label for="importJsonFile" class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-white transition-colors cursor-pointer">
+                                    <i class="fas fa-file-code mr-2"></i>JSON格式
+                                </label>
+                                <label for="importCsvFile" class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-white transition-colors cursor-pointer">
+                                    <i class="fas fa-file-csv mr-2"></i>CSV格式
+                                </label>
+                            </div>
+                        </div>
+                        <input type="file" id="importJsonFile" accept=".json" class="hidden">
+                        <input type="file" id="importCsvFile" accept=".csv" class="hidden">
+                    </div>
+                    <button id="clearDataBtn" class="w-full mt-3 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 flex items-center justify-center">
+                        <i class="fas fa-trash-alt mr-2"></i>清空所有数据
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧: Prompt列表和搜索 -->
+            <div class="lg:col-span-2 order-1 lg:order-2">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
+                            <i class="fas fa-search text-primary mr-2"></i>搜索Prompt
+                        </h2>
+                        <div class="flex items-center gap-2 mt-3 sm:mt-0">
+                            <span class="text-gray-600 dark:text-gray-300">提示总数: </span>
+                            <span id="promptCount" class="text-primary font-semibold">0</span>
+                        </div>
+                    </div>
+
+                    <div class="relative mb-6">
+                        <input type="text" id="searchInput" placeholder="搜索标题、标签或内容..." class="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-base">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+
+                    <div id="promptList" class="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)] custom-scrollbar dark:custom-scrollbar pr-2">
+                        <!-- Prompt列表将通过JS动态生成 -->
+                        <div id="emptyState" class="text-center py-12">
+                            <i class="fas fa-clipboard text-gray-300 dark:text-gray-600 text-5xl mb-4"></i>
+                            <p class="text-gray-500 dark:text-gray-400">您还没有保存任何Prompt</p>
+                            <p class="text-gray-500 dark:text-gray-400 mt-2">添加您的第一个Prompt开始使用</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 消息提示 -->
+        <div id="toast" class="fixed bottom-4 right-4 hidden bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <span id="toastMessage"></span>
+        </div>
+        
+        <!-- 编辑模态框 -->
+        <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-edit text-primary mr-2"></i>编辑Prompt
+                </h2>
+                <form id="editForm" class="space-y-4">
+                    <input type="hidden" id="editId">
+                    <div>
+                        <label for="editTitle" class="block text-gray-700 dark:text-gray-200 mb-1">标题</label>
+                        <input type="text" id="editTitle" required="" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-base">
+                    </div>
+                    <div>
+                        <label for="editTags" class="block text-gray-700 dark:text-gray-200 mb-1">标签 (用逗号分隔)</label>
+                        <input type="text" id="editTags" placeholder="例如: GPT-4, 写作, 翻译" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary text-base">
+                    </div>
+                    <div>
+                        <label for="editContent" class="block text-gray-700 dark:text-gray-200 mb-1">内容</label>
+                        <textarea id="editContent" rows="6" required="" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none text-base"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-2">
+                        <button type="button" id="cancelEdit" class="py-2 px-4 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                            取消
+                        </button>
+                        <button type="submit" class="py-2 px-4 bg-primary hover:bg-opacity-90 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            保存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 确认对话框 -->
+        <div id="confirmDialog" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 m-4 max-w-md w-full">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                    <span id="confirmTitle">确认操作</span>
+                </h2>
+                <p id="confirmMessage" class="text-gray-600 dark:text-gray-300 mb-6">您确定要执行此操作吗？</p>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancelConfirm" class="py-2 px-4 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        取消
+                    </button>
+                    <button id="confirmAction" class="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600">
+                        确认
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 暗色模式检测
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // IndexedDB 设置
+        let db;
+        const DB_NAME = 'PromptManagerDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'prompts';
+
+        // 初始化数据库
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = (event) => {
+                    showToast('数据库错误: ' + event.target.error, 'error');
+                    reject('数据库打开失败');
+                };
+                
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('title', 'title', { unique: false });
+                        store.createIndex('tags', 'tags', { unique: false, multiEntry: true });
+                        store.createIndex('content', 'content', { unique: false });
+                        store.createIndex('createdAt', 'createdAt', { unique: false });
+                    }
+                };
+            });
+        }
+
+        // 数据操作函数
+        async function addPrompt(prompt) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                prompt.createdAt = new Date().toISOString();
+                const request = store.add(prompt);
+                
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+                
+                request.onerror = () => {
+                    reject('添加Prompt失败');
+                };
+            });
+        }
+
+        async function getAllPrompts() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const prompts = request.result.sort((a, b) => {
+                        return new Date(b.createdAt) - new Date(a.createdAt);
+                    });
+                    resolve(prompts);
+                };
+                
+                request.onerror = () => {
+                    reject('获取Prompt列表失败');
+                };
+            });
+        }
+
+        async function updatePrompt(prompt) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(prompt);
+                
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+                
+                request.onerror = () => {
+                    reject('更新Prompt失败');
+                };
+            });
+        }
+
+        async function deletePrompt(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+                
+                request.onsuccess = () => {
+                    resolve();
+                };
+                
+                request.onerror = () => {
+                    reject('删除Prompt失败');
+                };
+            });
+        }
+
+        async function clearAllPrompts() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.clear();
+                
+                request.onsuccess = () => {
+                    resolve();
+                };
+                
+                request.onerror = () => {
+                    reject('清空Prompt失败');
+                };
+            });
+        }
+
+        async function searchPrompts(query) {
+            const prompts = await getAllPrompts();
+            
+            if (!query.trim()) {
+                return prompts;
+            }
+            
+            const lowerQuery = query.toLowerCase();
+            return prompts.filter(prompt => {
+                return (
+                    prompt.title.toLowerCase().includes(lowerQuery) ||
+                    prompt.content.toLowerCase().includes(lowerQuery) ||
+                    (prompt.tags && prompt.tags.some(tag => tag.toLowerCase().includes(lowerQuery)))
+                );
+            });
+        }
+
+        // UI 更新函数
+        function renderPromptList(prompts) {
+            const promptList = document.getElementById('promptList');
+            const emptyState = document.getElementById('emptyState');
+            const promptCount = document.getElementById('promptCount');
+            
+            promptList.innerHTML = '';
+            promptCount.textContent = prompts.length;
+            
+            if (prompts.length === 0) {
+                promptList.appendChild(emptyState);
+                return;
+            }
+            
+            prompts.forEach(prompt => {
+                const tagsHtml = prompt.tags && prompt.tags.length > 0 
+                    ? prompt.tags.map(tag => 
+                        `<span class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-full px-2 py-1 text-xs">${tag}</span>`
+                    ).join(' ')
+                    : '';
+                
+                const promptEl = document.createElement('div');
+                promptEl.className = 'prompt-item bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow';
+                promptEl.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <h3 class="text-lg font-medium text-gray-800 dark:text-white mb-2">${prompt.title}</h3>
+                        <div class="flex space-x-2">
+                            <button class="copy-btn relative p-2 text-primary hover:text-opacity-80 transition-colors" 
+                                data-content="${escapeHtml(prompt.content)}" title="复制内容">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="edit-btn p-2 text-blue-600 dark:text-blue-400 hover:text-opacity-80 transition-colors" 
+                                data-id="${prompt.id}" title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="delete-btn p-2 text-red-600 dark:text-red-400 hover:text-opacity-80 transition-colors" 
+                                data-id="${prompt.id}" title="删除">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-1 mb-3">
+                        ${tagsHtml}
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words text-sm max-h-20 overflow-y-auto custom-scrollbar dark:custom-scrollbar">
+                            ${prompt.content.length > 150 ? escapeHtml(prompt.content.substring(0, 150)) + '...' : escapeHtml(prompt.content)}
+                        </p>
+                    </div>
+                `;
+                
+                promptList.appendChild(promptEl);
+            });
+            
+            // 添加事件监听器
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', copyToClipboard);
+            });
+            
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', editPrompt);
+            });
+            
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', confirmDeletePrompt);
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toast.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-md shadow-lg';
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600', 'text-white');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600', 'text-white');
+            } else if (type === 'info') {
+                toast.classList.add('bg-blue-600', 'text-white');
+            }
+            
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        // 事件处理函数
+        async function handleAddPrompt(e) {
+            e.preventDefault();
+            
+            const titleInput = document.getElementById('promptTitle');
+            const tagsInput = document.getElementById('promptTags');
+            const contentInput = document.getElementById('promptContent');
+            
+            const title = titleInput.value.trim();
+            const tagsString = tagsInput.value.trim();
+            const content = contentInput.value.trim();
+            
+            if (!title || !content) {
+                showToast('请填写标题和内容', 'error');
+                return;
+            }
+            
+            const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+            
+            try {
+                await addPrompt({ title, tags, content });
+                showToast('Prompt已保存');
+                
+                // 重置表单
+                titleInput.value = '';
+                tagsInput.value = '';
+                contentInput.value = '';
+                
+                // 刷新列表
+                refreshPromptList();
+            } catch (error) {
+                showToast('保存失败: ' + error, 'error');
+            }
+        }
+
+        async function refreshPromptList() {
+            try {
+                const searchInput = document.getElementById('searchInput');
+                const query = searchInput.value.trim();
+                
+                let prompts;
+                if (query) {
+                    prompts = await searchPrompts(query);
+                } else {
+                    prompts = await getAllPrompts();
+                }
+                
+                renderPromptList(prompts);
+            } catch (error) {
+                showToast('获取Prompt列表失败: ' + error, 'error');
+            }
+        }
+
+        function copyToClipboard(e) {
+            const button = e.currentTarget;
+            const content = button.dataset.content;
+            
+            navigator.clipboard.writeText(content)
+                .then(() => {
+                    button.classList.add('copy-success');
+                    setTimeout(() => {
+                        button.classList.remove('copy-success');
+                    }, 1000);
+                    showToast('内容已复制到剪贴板');
+                })
+                .catch(err => {
+                    showToast('复制失败: ' + err, 'error');
+                });
+        }
+
+        async function editPrompt(e) {
+            const button = e.currentTarget;
+            const id = parseInt(button.dataset.id);
+            
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+                
+                request.onsuccess = () => {
+                    const prompt = request.result;
+                    
+                    if (prompt) {
+                        document.getElementById('editId').value = prompt.id;
+                        document.getElementById('editTitle').value = prompt.title;
+                        document.getElementById('editTags').value = prompt.tags ? prompt.tags.join(', ') : '';
+                        document.getElementById('editContent').value = prompt.content;
+                        
+                        document.getElementById('editModal').classList.remove('hidden');
+                    } else {
+                        showToast('找不到要编辑的Prompt', 'error');
+                    }
+                };
+                
+                request.onerror = () => {
+                    showToast('获取Prompt详情失败', 'error');
+                };
+            } catch (error) {
+                showToast('编辑操作失败: ' + error, 'error');
+            }
+        }
+
+        async function handleUpdatePrompt(e) {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('editId').value);
+            const title = document.getElementById('editTitle').value.trim();
+            const tagsString = document.getElementById('editTags').value.trim();
+            const content = document.getElementById('editContent').value.trim();
+            
+            if (!title || !content) {
+                showToast('请填写标题和内容', 'error');
+                return;
+            }
+            
+            const tags = tagsString ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+            
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+                
+                request.onsuccess = async () => {
+                    const prompt = request.result;
+                    
+                    if (prompt) {
+                        prompt.title = title;
+                        prompt.tags = tags;
+                        prompt.content = content;
+                        
+                        await updatePrompt(prompt);
+                        showToast('Prompt已更新');
+                        document.getElementById('editModal').classList.add('hidden');
+                        refreshPromptList();
+                    } else {
+                        showToast('找不到要更新的Prompt', 'error');
+                    }
+                };
+                
+                request.onerror = () => {
+                    showToast('获取Prompt详情失败', 'error');
+                };
+            } catch (error) {
+                showToast('更新失败: ' + error, 'error');
+            }
+        }
+
+        function confirmDeletePrompt(e) {
+            const button = e.currentTarget;
+            const id = parseInt(button.dataset.id);
+            
+            document.getElementById('confirmTitle').textContent = '确认删除';
+            document.getElementById('confirmMessage').textContent = '您确定要删除这个Prompt吗？此操作无法撤销。';
+            
+            const confirmAction = document.getElementById('confirmAction');
+            confirmAction.onclick = async () => {
+                try {
+                    await deletePrompt(id);
+                    showToast('Prompt已删除');
+                    document.getElementById('confirmDialog').classList.add('hidden');
+                    refreshPromptList();
+                } catch (error) {
+                    showToast('删除失败: ' + error, 'error');
+                }
+            };
+            
+            document.getElementById('confirmDialog').classList.remove('hidden');
+        }
+
+        function confirmClearAllData() {
+            document.getElementById('confirmTitle').textContent = '确认清空所有数据';
+            document.getElementById('confirmMessage').textContent = '您确定要删除所有Prompt数据吗？此操作无法撤销。';
+            
+            const confirmAction = document.getElementById('confirmAction');
+            confirmAction.onclick = async () => {
+                try {
+                    await clearAllPrompts();
+                    showToast('所有数据已清空');
+                    document.getElementById('confirmDialog').classList.add('hidden');
+                    refreshPromptList();
+                } catch (error) {
+                    showToast('清空数据失败: ' + error, 'error');
+                }
+            };
+            
+            document.getElementById('confirmDialog').classList.remove('hidden');
+        }
+
+        // 将Prompt数据转换为CSV字符串
+        function convertToCSV(prompts) {
+            // CSV头部
+            const headers = ['标题', '标签', '内容', '创建时间'];
+            
+            // 生成CSV内容
+            const rows = prompts.map(prompt => {
+                // 处理内容中的特殊字符，确保CSV格式正确
+                const title = `"${prompt.title.replace(/"/g, '""')}"`;
+                const tags = `"${(prompt.tags || []).join(',').replace(/"/g, '""')}"`;
+                const content = `"${prompt.content.replace(/"/g, '""')}"`;
+                const createdAt = `"${prompt.createdAt}"`;
+                
+                return [title, tags, content, createdAt].join(',');
+            });
+            
+            return [headers.join(','), ...rows].join('\n');
+        }
+        
+        // 解析CSV数据为Prompt对象数组
+        function parseCSV(csvText) {
+            const lines = csvText.split(/\r\n|\n/);
+            const headers = lines[0].split(',');
+            
+            // 确保CSV格式正确
+            if (headers.length < 3 || 
+                !headers.some(h => h.includes('标题')) || 
+                !headers.some(h => h.includes('内容'))) {
+                throw new Error('CSV格式不正确，需要至少包含"标题"和"内容"列');
+            }
+            
+            const results = [];
+            
+            // 解析每一行数据
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                // 处理CSV中的引号和逗号
+                const values = [];
+                let insideQuotes = false;
+                let currentValue = '';
+                
+                for (let j = 0; j < lines[i].length; j++) {
+                    const char = lines[i][j];
+                    
+                    if (char === '"') {
+                        if (insideQuotes && lines[i][j + 1] === '"') {
+                            // 连续两个引号表示转义
+                            currentValue += '"';
+                            j++;
+                        } else {
+                            // 切换引号状态
+                            insideQuotes = !insideQuotes;
+                        }
+                    } else if (char === ',' && !insideQuotes) {
+                        // 逗号分隔，不在引号内
+                        values.push(currentValue);
+                        currentValue = '';
+                    } else {
+                        currentValue += char;
+                    }
+                }
+                
+                // 添加最后一个值
+                values.push(currentValue);
+                
+                // 创建Prompt对象
+                const prompt = {
+                    title: values[0] || '未命名',
+                    tags: values[1] ? values[1].split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+                    content: values[2] || '',
+                    createdAt: values[3] || new Date().toISOString()
+                };
+                
+                results.push(prompt);
+            }
+            
+            return results;
+        }
+
+        // 导出数据（支持JSON和CSV）
+        async function exportToJson() {
+            try {
+                const prompts = await getAllPrompts();
+                const dataStr = JSON.stringify(prompts, null, 2);
+                
+                // 使用UTF-8编码并添加BOM标记，以便Excel等应用能正确识别中文
+                const BOM = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                const blob = new Blob([BOM, dataStr], { type: 'application/json;charset=utf-8' });
+                
+                // 创建下载链接
+                const exportName = 'prompt_manager_backup_' + new Date().toISOString().split('T')[0] + '.json';
+                
+                // 使用Blob和URL.createObjectURL创建链接，比data URI更可靠地处理中文
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', exportName);
+                link.setAttribute('target', '_blank');
+                document.body.appendChild(link);
+                link.click();
+                
+                // 清理
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                
+                showToast('JSON数据导出成功，请保存文件');
+            } catch (error) {
+                showToast('导出数据失败: ' + error, 'error');
+            }
+        }
+        
+        async function exportToCsv() {
+            try {
+                const prompts = await getAllPrompts();
+                const csvData = convertToCSV(prompts);
+                
+                // 使用UTF-8编码并添加BOM标记，确保Excel等应用能正确识别中文
+                const BOM = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                const blob = new Blob([BOM, csvData], { type: 'text/csv;charset=utf-8' });
+                
+                // 创建下载链接
+                const exportName = 'prompt_manager_backup_' + new Date().toISOString().split('T')[0] + '.csv';
+                
+                // 使用Blob和URL.createObjectURL创建链接，比data URI更可靠地处理中文
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', exportName);
+                link.setAttribute('target', '_blank');
+                document.body.appendChild(link);
+                link.click();
+                
+                // 清理
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                
+                showToast('CSV数据导出成功，请保存文件');
+            } catch (error) {
+                showToast('导出CSV数据失败: ' + error, 'error');
+            }
+        }
+
+        async function importJsonFile(e) {
+            const file = e.target.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                try {
+                    // 检测并移除BOM标记
+                    let content = e.target.result;
+                    if (content.charCodeAt(0) === 0xFEFF) {
+                        content = content.slice(1);
+                    }
+                    
+                    const data = JSON.parse(content);
+                    
+                    if (!Array.isArray(data)) {
+                        showToast('导入的JSON格式不正确', 'error');
+                        return;
+                    }
+                    
+                    // 确认导入
+                    document.getElementById('confirmTitle').textContent = '确认导入JSON数据';
+                    document.getElementById('confirmMessage').textContent = `找到 ${data.length} 条Prompt记录，是否导入？导入的数据将与现有数据合并。`;
+                    
+                    const confirmAction = document.getElementById('confirmAction');
+                    confirmAction.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    confirmAction.classList.add('bg-green-600', 'hover:bg-green-700');
+                    
+                    confirmAction.onclick = async () => {
+                        try {
+                            let importedCount = 0;
+                            
+                            for (const prompt of data) {
+                                // 确保没有ID或生成新ID
+                                if (prompt.id) {
+                                    delete prompt.id;
+                                }
+                                
+                                // 确保有创建时间
+                                if (!prompt.createdAt) {
+                                    prompt.createdAt = new Date().toISOString();
+                                }
+                                
+                                await addPrompt(prompt);
+                                importedCount++;
+                            }
+                            
+                            showToast(`成功导入 ${importedCount} 条Prompt记录`);
+                            document.getElementById('confirmDialog').classList.add('hidden');
+                            refreshPromptList();
+                            
+                            // 重置文件输入
+                            document.getElementById('importJsonFile').value = '';
+                        } catch (error) {
+                            showToast('导入过程中出错: ' + error, 'error');
+                        } finally {
+                            confirmAction.classList.remove('bg-green-600', 'hover:bg-green-700');
+                            confirmAction.classList.add('bg-red-600', 'hover:bg-red-700');
+                        }
+                    };
+                    
+                    document.getElementById('confirmDialog').classList.remove('hidden');
+                } catch (error) {
+                    showToast('解析JSON文件失败: ' + error, 'error');
+                }
+            };
+            
+            reader.onerror = () => {
+                showToast('读取文件失败', 'error');
+            };
+            
+            // 明确指定UTF-8编码
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        async function importCsvFile(e) {
+            const file = e.target.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                try {
+                    // 检测并移除BOM标记
+                    let csvText = e.target.result;
+                    if (csvText.charCodeAt(0) === 0xFEFF) {
+                        csvText = csvText.slice(1);
+                    }
+                    
+                    const prompts = parseCSV(csvText);
+                    
+                    if (prompts.length === 0) {
+                        showToast('CSV文件中没有有效的Prompt数据', 'error');
+                        return;
+                    }
+                    
+                    // 确认导入
+                    document.getElementById('confirmTitle').textContent = '确认导入CSV数据';
+                    document.getElementById('confirmMessage').textContent = `找到 ${prompts.length} 条Prompt记录，是否导入？导入的数据将与现有数据合并。`;
+                    
+                    const confirmAction = document.getElementById('confirmAction');
+                    confirmAction.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    confirmAction.classList.add('bg-green-600', 'hover:bg-green-700');
+                    
+                    confirmAction.onclick = async () => {
+                        try {
+                            let importedCount = 0;
+                            
+                            for (const prompt of prompts) {
+                                await addPrompt(prompt);
+                                importedCount++;
+                            }
+                            
+                            showToast(`成功导入 ${importedCount} 条Prompt记录`);
+                            document.getElementById('confirmDialog').classList.add('hidden');
+                            refreshPromptList();
+                            
+                            // 重置文件输入
+                            document.getElementById('importCsvFile').value = '';
+                        } catch (error) {
+                            showToast('导入过程中出错: ' + error, 'error');
+                        } finally {
+                            confirmAction.classList.remove('bg-green-600', 'hover:bg-green-700');
+                            confirmAction.classList.add('bg-red-600', 'hover:bg-red-700');
+                        }
+                    };
+                    
+                    document.getElementById('confirmDialog').classList.remove('hidden');
+                } catch (error) {
+                    showToast('解析CSV文件失败: ' + error, 'error');
+                }
+            };
+            
+            reader.onerror = () => {
+                showToast('读取文件失败', 'error');
+            };
+            
+            // 明确指定UTF-8编码
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // 初始化应用
+        async function initApp() {
+            try {
+                await initDB();
+                refreshPromptList();
+                
+                // 事件监听
+                document.getElementById('promptForm').addEventListener('submit', handleAddPrompt);
+                document.getElementById('searchInput').addEventListener('input', refreshPromptList);
+                document.getElementById('editForm').addEventListener('submit', handleUpdatePrompt);
+                document.getElementById('cancelEdit').addEventListener('click', () => {
+                    document.getElementById('editModal').classList.add('hidden');
+                });
+                document.getElementById('cancelConfirm').addEventListener('click', () => {
+                    document.getElementById('confirmDialog').classList.add('hidden');
+                });
+                // 导出按钮事件监听
+                document.getElementById('exportJsonBtn').addEventListener('click', exportToJson);
+                document.getElementById('exportCsvBtn').addEventListener('click', exportToCsv);
+                
+                // 导入按钮事件监听
+                document.getElementById('importJsonFile').addEventListener('change', importJsonFile);
+                document.getElementById('importCsvFile').addEventListener('change', importCsvFile);
+                document.getElementById('clearDataBtn').addEventListener('click', confirmClearAllData);
+                
+                // 点击模态框背景关闭
+                document.getElementById('editModal').addEventListener('click', (e) => {
+                    if (e.target === document.getElementById('editModal')) {
+                        document.getElementById('editModal').classList.add('hidden');
+                    }
+                });
+                document.getElementById('confirmDialog').addEventListener('click', (e) => {
+                    if (e.target === document.getElementById('confirmDialog')) {
+                        document.getElementById('confirmDialog').classList.add('hidden');
+                    }
+                });
+            } catch (error) {
+                showToast('初始化应用失败: ' + error, 'error');
+            }
+        }
+
+        // 启动应用
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+
+
+</body></html>
